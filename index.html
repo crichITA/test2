@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login QR System</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Login</h1>
+  <form id="login-form">
+    <label>Nome utente: <input type="text" id="username" required /></label><br />
+    <label>Password: <input type="password" id="password" required /></label><br />
+    <button type="submit">Accedi</button>
+  </form>
+  <p id="login-status"></p>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        document.getElementById("login-status").innerText = "Inserisci username e password";
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem("token", data.token);
+          if (data.role === "admin") {
+            window.location.href = "admin.html";
+          } else {
+            window.location.href = "scanner.html";
+          }
+        } else if (res.status === 401) {
+          document.getElementById("login-status").innerText = "Credenziali non valide";
+        } else {
+          document.getElementById("login-status").innerText = "Errore durante login, riprova";
+        }
+      } catch (error) {
+        document.getElementById("login-status").innerText = "Errore di rete: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>

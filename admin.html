@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin QR Generator & User Management</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Genera QR Code</h1>
+  <form id="qr-form">
+    <label>Nome destinatario: <input type="text" id="nome" required /></label><br />
+    <button type="submit">Genera e scarica PDF</button>
+  </form>
+  <p id="pdf-link"></p>
+
+  <hr />
+
+  <h2>Crea nuovo utente</h2>
+  <form id="user-form">
+    <label>Username: <input type="text" id="new-username" required /></label><br />
+    <label>Password: <input type="password" id="new-password" required /></label><br />
+    <label>Ruolo: 
+      <select id="new-role" required>
+        <option value="scanner">Scanner</option>
+        <option value="admin">Admin</option>
+      </select>
+    </label><br />
+    <button type="submit">Crea utente</button>
+  </form>
+  <p id="user-status"></p>
+
+  <script>
+    const token = localStorage.getItem("token");
+
+    document.getElementById("qr-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value.trim();
+      if (!nome) return alert("Inserisci il nome destinatario");
+
+      try {
+        const res = await fetch("http://localhost:5000/admin/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ name: nome }),
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          document.getElementById("pdf-link").innerHTML = `<a href="${url}" download="qr_code.pdf">📄 Scarica PDF</a>`;
+        } else {
+          alert("Errore nella generazione del QR Code");
+        }
+      } catch (error) {
+        alert("Errore di rete: " + error.message);
+      }
+    });
+
+    document.getElementById("user-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("new-username").value.trim();
+      const password = document.getElementById("new-password").value.trim();
+      const role = document.getElementById("new-role").value;
+
+      if (!username || !password || !role) {
+        document.getElementById("user-status").innerText = "Compila tutti i campi";
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/admin/create-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ username, password, role }),
+        });
+
+        if (res.ok) {
+          document.getElementById("user-status").innerText = "Utente creato con successo!";
+          document.getElementById("user-form").reset();
+        } else if (res.status === 409) {
+          document.getElementById("user-status").innerText = "Utente già esistente";
+        } else {
+          document.getElementById("user-status").innerText = "Errore durante la creazione utente";
+        }
+      } catch (error) {
+        document.getElementById("user-status").innerText = "Errore di rete: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
